@@ -16,32 +16,81 @@ router.get('/', async (req: Request, res: Response) => {
     res.send(items);
 });
 
-//@TODO
-//Add an endpoint to GET a specific resource by Primary Key
+//@DONE
+//Get a specific resource by Primary Key
+router.get('/:id', async (req: Request, res: Response) => {
+    let { id } = req.params;
+
+    // check to make sure the id is set
+    if (!id) {
+      // respond with an error if not
+      return res.status(400).send(`id is required`);
+    }
+
+    const item = await FeedItem.findByPk(id);
+
+    if (item == null){
+      return res.status(404).send("Item not found");
+    }
+
+    if(item.url) {
+      item.url = AWS.getGetSignedUrl(item.url);
+    }
+
+    res.status(200).send(item);
+});
 
 // update a specific resource
-router.patch('/:id', 
-    requireAuth, 
+router.patch('/:id',
+    requireAuth,
     async (req: Request, res: Response) => {
-        //@TODO try it yourself
-        res.send(500).send("not implemented")
+        let { id } = req.params;
+        // check to make sure the id is set
+        if (!id) {
+          // respond with an error if not
+          return res.status(400).send(`id is required`);
+        }
+
+        const item = await FeedItem.findByPk(id);
+
+        if (item == null){
+          return res.status(404).send("Item not found");
+        }
+
+        const updated_caption = req.body.caption;
+        const updated_fileName = req.body.url;
+        // check Caption is valid
+        if (!updated_caption) {
+          return res.status(400).send({ message: 'Caption is required or malformed' });
+        }
+
+        // check Filename is valid
+        if (!updated_fileName) {
+          return res.status(400).send({ message: 'File url is required' });
+        }
+        item.caption = updated_caption;
+        item.url = updated_fileName;
+
+        const saved_item = await item.save();
+        const saved_item_url = AWS.getPutSignedUrl(saved_item.url);
+        res.send(201).send(saved_item);
 });
 
 
 // Get a signed url to put a new item in the bucket
-router.get('/signed-url/:fileName', 
-    requireAuth, 
+router.get('/signed-url/:fileName',
+    requireAuth,
     async (req: Request, res: Response) => {
     let { fileName } = req.params;
     const url = AWS.getPutSignedUrl(fileName);
     res.status(201).send({url: url});
 });
 
-// Post meta data and the filename after a file is uploaded 
+// Post meta data and the filename after a file is uploaded
 // NOTE the file name is they key name in the s3 bucket.
 // body : {caption: string, fileName: string};
-router.post('/', 
-    requireAuth, 
+router.post('/',
+    requireAuth,
     async (req: Request, res: Response) => {
     const caption = req.body.caption;
     const fileName = req.body.url;
