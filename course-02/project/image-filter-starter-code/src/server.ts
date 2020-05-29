@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, response } from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
@@ -13,7 +13,7 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   // Use the body parser middleware for post requests
   app.use(bodyParser.json());
 
-  // @TODO1 IMPLEMENT A RESTFUL ENDPOINT
+  // @DONE IMPLEMENT A RESTFUL ENDPOINT
   // GET /filteredimage?image_url={{URL}}
   // endpoint to filter an image from a public url.
   // IT SHOULD
@@ -28,8 +28,39 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
 
   /**************************************************************************** */
+  
+  app.get( "/filteredimage/:image_url",
+    async ( req: Request, res: Response ) => {
+      let { url } = req.params;
 
-  //! END @TODO1
+      // check if url provided
+      if ( !url ) {
+        return res.status(400).send(`url is required`);
+      }
+      
+      // check if url object can be created, if not assume there's an issue with the url provided
+      // caveat: does not check if the url points to something, or an image
+      const image_url: URL = new URL(url);
+      if ( !image_url){
+        return res.status(400).send(`url not valid`);
+      }
+
+      // call the filter function
+      const filtered_path = await filterImageFromURL(image_url.toString());
+      // check if server was able to process image
+      if ( !filtered_path){
+        return res.status(500).send(`url could not be processed`)
+      }
+
+      // use sendFile callback to delete the file locally
+      return res.status(200).sendFile(filtered_path, function(err) {
+        if (err) {
+          console.log(err); // Check error if you want
+        }
+        deleteLocalFiles([filtered_path]);
+      });
+
+    });
   
   // Root Endpoint
   // Displays a simple message to the user
