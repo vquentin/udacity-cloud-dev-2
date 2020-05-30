@@ -1,4 +1,4 @@
-import express, { Request, Response, response } from 'express';
+import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
@@ -29,37 +29,35 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
   /**************************************************************************** */
   
-  app.get( "/filteredimage/:image_url",
+  app.get( "/filteredimage/",
     async ( req: Request, res: Response ) => {
-      let { url } = req.params;
-
+      let { image_url } = req.query;
+      console.log("\n"+image_url+"\n");
       // check if url provided
-      if ( !url ) {
+      if ( !image_url ) {
         return res.status(400).send(`url is required`);
       }
-      
-      // check if url object can be created, if not assume there's an issue with the url provided
-      // caveat: does not check if the url points to something, or an image
-      const image_url: URL = new URL(url);
-      if ( !image_url){
-        return res.status(400).send(`url not valid`);
-      }
 
-      // call the filter function
-      const filtered_path = await filterImageFromURL(image_url.toString());
-      // check if server was able to process image
-      if ( !filtered_path){
-        return res.status(500).send(`url could not be processed`)
-      }
-
+      // call the filter function, and catch errors
+      var filtered_path: string ;
+      try {
+        filtered_path = await filterImageFromURL(image_url.toString());
+      } catch(e){
+          console.error(e);
+          return res.status(500)
+                  .send(`Could not process image. Make sure the url is valid`);
+      } 
+        
       // use sendFile callback to delete the file locally
-      return res.status(200).sendFile(filtered_path, function(err) {
+      return res.status(200)
+                .sendFile(filtered_path, function(err) {
         if (err) {
-          console.log(err); // Check error if you want
+          console.log("Is this running too?");
+          return res.status(500)
+                    .send(`The processed file could not be sent`);
         }
         deleteLocalFiles([filtered_path]);
-      });
-
+      });      
     });
   
   // Root Endpoint
