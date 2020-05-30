@@ -42,12 +42,16 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
       var filtered_path: string ;
       try {
         filtered_path = await filterImageFromURL(image_url.toString());
+        if(filtered_path === "Error"){
+          console.log("This is dope");
+        }
       } catch(e){
           console.error(e);
           return res.status(500)
                   .send(`Could not process image. Make sure the url is valid`);
       } 
-        
+      
+
       // use sendFile callback to delete the file locally
       return res.status(200)
                 .sendFile(filtered_path, function(err) {
