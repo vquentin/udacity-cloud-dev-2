@@ -32,36 +32,24 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   app.get( "/filteredimage/",
     async ( req: Request, res: Response ) => {
       let { image_url } = req.query;
-      console.log("\n"+image_url+"\n");
+      
       // check if url provided
       if ( !image_url ) {
         return res.status(400).send(`url is required`);
       }
 
       // call the filter function, and catch errors
-      var filtered_path: string ;
       try {
-        filtered_path = await filterImageFromURL(image_url.toString());
-        if(filtered_path === "Error"){
-          console.log("This is dope");
-        }
-      } catch(e){
-          console.error(e);
-          return res.status(500)
-                  .send(`Could not process image. Make sure the url is valid`);
+        const filtered_path = await filterImageFromURL(image_url);
+        // use sendFile callback to delete the file locally
+        return res.status(200)
+                .sendFile(filtered_path, async() => {
+        await deleteLocalFiles([filtered_path]);
+                });      
+      } catch(err){
+          return res.status(400)
+                  .send(JSON.stringify(err));
       } 
-      
-
-      // use sendFile callback to delete the file locally
-      return res.status(200)
-                .sendFile(filtered_path, function(err) {
-        if (err) {
-          console.log("Is this running too?");
-          return res.status(500)
-                    .send(`The processed file could not be sent`);
-        }
-        deleteLocalFiles([filtered_path]);
-      });      
     });
   
   // Root Endpoint
