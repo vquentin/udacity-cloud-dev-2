@@ -48,7 +48,7 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
                 });      
       } catch(err){
           return res.status(400)
-                  .send(JSON.stringify(err));
+                  .send(`Image processing returned error. Check image_url`);
       } 
     });
   
